@@ -1,0 +1,18 @@
+{
+  "name": "json-edit",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "react": "^16.2.0",
+    "react-dom": "^16.2.0",
+    "react-scripts": "1.1.1"
+  },
+  "homepage": "https://apps.codeite.net/json-edit",
+  "scripts": {
+    "start": "PORT=3047 react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test --env=jsdom",
+    "eject": "react-scripts eject",
+    "deploy:live": "rsync -avz --delete ./build/ sam@helium:~/webs/apps.codeite.net/static/json-edit"
+  }
+}

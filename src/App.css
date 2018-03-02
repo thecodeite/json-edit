@@ -1,0 +1,100 @@
+* {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  box-sizing: border-box;
+}
+
+hr {
+  xborder-top: 1px solid black;
+}
+
+.App {
+  height: 100vh;
+  width: 100vw;
+  overflow-x: hidden;
+  overflow-y: hidden;
+}
+
+.Editor {
+  background: #e0e0e0;
+  height: 100%;
+}
+
+r {
+  display: inline;
+  background-color: #ffddcc;
+}
+
+/* .Editor textarea {
+  width: calc(100% - 4px - 4px);
+  height: 200px;
+  margin: 4px;
+  padding: 4px;
+} */
+
+main {
+  background: #e0e0e0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 16px 32px 20px 200px 1fr;
+  grid-gap: 8px;
+
+  grid-template-areas:
+    'header header'
+    'h1 h1'
+    'left-bar right-bar'
+    'code code';
+
+  height: 100%;
+}
+
+main > * {
+  overflow-y: auto;
+}
+
+main header {
+  grid-area: header;
+  overflow-y: hidden;
+}
+
+main h1 {
+  grid-area: h1;
+  overflow-y: hidden;
+}
+
+main .leftBar {
+  grid-area: left-bar;
+  overflow-y: hidden;
+}
+
+main .rightBar {
+  grid-area: right-bar;
+  overflow-y: hidden;
+}
+main .code {
+  grid-area: code;
+  overflow-y: hidden;
+}
+
+main textarea {
+  width: 100%;
+  height: 100%;
+  padding: 8px;
+}
+
+main fieldset {
+  padding-bottom: 16px;
+  width: 100%;
+  height: calc(100% - 16px);
+}
+
+.Preview {
+  background: white;
+}
+
+button {
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
