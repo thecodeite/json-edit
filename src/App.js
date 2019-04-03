@@ -1,12 +1,11 @@
 import React, { Component } from 'react'
+import MonacoEditor from 'react-monaco-editor'
 import './App.css'
 
 const prefix = 'json-'
 
-const defaultCode = `return json.map(item => {
-  return {...item};
-})`
-
+const defaultCode = `return json`
+const flagNames = ['slow', 'simple']
 class App extends Component {
   constructor() {
     super()
@@ -25,7 +24,9 @@ class App extends Component {
     const data = {
       code: fromLocalStorage.code || defaultCode,
       json: fromLocalStorage.json || '[]',
-      slow: Boolean(fromLocalStorage.slow),
+      flags:
+        fromLocalStorage.flags ||
+        flagNames.reduce((p, c) => ({ ...p, [c]: false }), {}),
       name,
       names
     }
@@ -39,6 +40,7 @@ class App extends Component {
 
   run({ code, json }) {
     try {
+      // eslint-disable-next-line
       var transform = new Function('json', code)
       return transform(JSON.parse(json))
     } catch (e) {
@@ -68,29 +70,48 @@ class App extends Component {
   }
 
   render() {
-    const { name, names, code, json, slow, result } = this.state
+    const { name, names, code, json, flags, result } = this.state
+
+    const onMonacoChange = section => newValue => {
+      const data = {
+        code,
+        json,
+        flags
+      }
+      data[section] = newValue
+      window.localStorage.setItem(prefix + name, JSON.stringify(data))
+      this.setState(this.load())
+    }
 
     const onChange = section => e => {
       const data = {
         code,
         json,
-        slow
+        flags
       }
       data[section] = e.target.value
       window.localStorage.setItem(prefix + name, JSON.stringify(data))
       this.setState(this.load())
     }
 
-    const onChecked = section => e => {
-      console.log('e.target.checked, section:', e.target.checked, section)
+    const onCheckedFlag = flagName => e => {
+      console.log('e.target.checked, section:', e.target.checked, flagName)
       const data = {
         code,
         json,
-        slow
+        flags
       }
-      data[section] = e.target.checked
+      data['flags'][flagName] = e.target.checked
       window.localStorage.setItem(prefix + name, JSON.stringify(data))
       this.setState(this.load())
+    }
+
+    const options = {
+      selectOnLineNumbers: true,
+      roundedSelection: false,
+      readOnly: false,
+      cursorStyle: 'line',
+      automaticLayout: false
     }
 
     return (
@@ -111,35 +132,70 @@ class App extends Component {
           </header>
           <h1>{name}</h1>
           <div className="leftBar">
-            Slow
-            <input
-              type="checkbox"
-              checked={slow}
-              onChange={onChecked('slow')}
-            />
+            {flagNames.map(name => (
+              <span>
+                <label>
+                  {name}
+                  <input
+                    type="checkbox"
+                    checked={flags[name]}
+                    onChange={onCheckedFlag(name)}
+                  />
+                </label>{' '}
+              </span>
+            ))}
           </div>
           <div className="rightBar">
-            {slow && <button onClick={() => this.runSlow()}>Run</button>}
+            {flags.slow && <button onClick={() => this.runSlow()}>Run</button>}
           </div>
 
           <div className="code">
             <fieldset>
               <legend>Code</legend>
-              <textarea value={code} onChange={onChange('code')} />
+              {flags.simple ? (
+                <textarea value={code} onChange={onChange('code')} />
+              ) : (
+                <MonacoEditor
+                  height="200"
+                  language="javascript"
+                  value={code}
+                  options={options}
+                  onChange={onMonacoChange('code')}
+                />
+              )}
             </fieldset>
           </div>
 
           <div>
             <fieldset>
               <legend>JSON</legend>
-              <textarea value={json} onChange={onChange('json')} />
+              {flags.simple ? (
+                <textarea value={json} onChange={onChange('json')} />
+              ) : (
+                <MonacoEditor
+                  height="500"
+                  language="json"
+                  value={json}
+                  options={options}
+                  onChange={onMonacoChange('json')}
+                />
+              )}
             </fieldset>
           </div>
           <div>
             <fieldset>
               <legend>Result</legend>
               <pre className="Preview">
-                {JSON.stringify(result, null, '  ')}
+                {flags.simple ? (
+                  JSON.stringify(result, null, '  ')
+                ) : (
+                  <MonacoEditor
+                    height="500"
+                    language="json"
+                    value={JSON.stringify(result, null, '  ')}
+                    options={{ ...options, readOnly: true }}
+                  />
+                )}
               </pre>
             </fieldset>
           </div>
