@@ -1,4 +1,4 @@
-import React, { Component } from 'react'
+import React, { Component, Fragment } from 'react'
 import MonacoEditor from 'react-monaco-editor'
 import './App.css'
 
@@ -9,13 +9,16 @@ const flagNames = ['slow', 'simple']
 class App extends Component {
   constructor() {
     super()
-    this.state = { ...this.load(), result: '' }
+    this.state = { loggedIn: false, result: '', ...this.load() }
   }
 
   load() {
     const name = window.location.hash.substr(1) || 'default'
-    const fromLocalStorage =
-      JSON.parse(window.localStorage.getItem(prefix + name)) || {}
+    const localStorageValue = JSON.parse(
+      window.localStorage.getItem(prefix + name)
+    )
+
+    const fromLocalStorage = localStorageValue || {}
     const names = [...window.localStorage]
       .map((_, i) => localStorage.key(i))
       .filter(n => n.startsWith(prefix))
@@ -27,6 +30,7 @@ class App extends Component {
       flags:
         fromLocalStorage.flags ||
         flagNames.reduce((p, c) => ({ ...p, [c]: false }), {}),
+      gist: fromLocalStorage.gist,
       name,
       names
     }
@@ -42,7 +46,8 @@ class App extends Component {
     try {
       // eslint-disable-next-line
       var transform = new Function('json', code)
-      return transform(JSON.parse(json))
+      const res = transform(JSON.parse(json))
+      return res
     } catch (e) {
       return e.toString()
     }
@@ -69,14 +74,77 @@ class App extends Component {
     this.setState(this.load())
   }
 
+  async loadFromGist() {
+    const { code, json, gist } = this.state
+    const r = await fetch(`https://api.github.com/gists/${gist}`)
+    const changes = {}
+    if (r.ok) {
+      const { files } = await r.json()
+      if (files['code.js']) {
+        changes.code = files['code.js'].content
+      }
+      if (files['data.json']) {
+        changes.json = files['data.json'].content
+      }
+
+      console.log('changes:', changes)
+      if (
+        (changes.code && changes.code !== code) ||
+        (changes.json && changes.json !== json)
+      ) {
+        if (
+          window.confirm('This will overwrite local changes.\nAre you sure?')
+        ) {
+          this.setState(changes)
+        }
+      }
+    }
+  }
+
+  async saveToGist() {
+    const { code, json, gist } = this.state
+
+    const files = {}
+    files['code.js'] = { content: code }
+    files['data.json'] = { content: json }
+
+    const r = await fetch(
+      `https://api-github-com.auth.codeite.net/gists/${gist}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ description: 'Update', files }),
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include'
+      }
+    )
+
+    if (r.ok) {
+      alert('saved')
+    } else {
+      alert('not saved')
+    }
+  }
+
   render() {
-    const { name, names, code, json, flags, result } = this.state
+    const {
+      name,
+      names,
+      code,
+      json,
+      flags,
+      gist,
+      result,
+      loggedIn
+    } = this.state
 
     const onMonacoChange = section => newValue => {
       const data = {
         code,
         json,
-        flags
+        flags,
+        gist
       }
       data[section] = newValue
       window.localStorage.setItem(prefix + name, JSON.stringify(data))
@@ -87,7 +155,8 @@ class App extends Component {
       const data = {
         code,
         json,
-        flags
+        flags,
+        gist
       }
       data[section] = e.target.value
       window.localStorage.setItem(prefix + name, JSON.stringify(data))
@@ -99,7 +168,8 @@ class App extends Component {
       const data = {
         code,
         json,
-        flags
+        flags,
+        gist
       }
       data['flags'][flagName] = e.target.checked
       window.localStorage.setItem(prefix + name, JSON.stringify(data))
@@ -131,9 +201,10 @@ class App extends Component {
             ))}
           </header>
           <h1>{name}</h1>
+
           <div className="leftBar">
             {flagNames.map(name => (
-              <span>
+              <span key={name}>
                 <label>
                   {name}
                   <input
@@ -147,6 +218,24 @@ class App extends Component {
           </div>
           <div className="rightBar">
             {flags.slow && <button onClick={() => this.runSlow()}>Run</button>}
+            <label>
+              Gist:
+              <input
+                type="url"
+                size={100}
+                value={gist}
+                onChange={onChange('gist')}
+              />
+            </label>
+            <button onClick={() => this.loadFromGist()}>Load</button>
+            {loggedIn && (
+              <Fragment>
+                |-----|
+                <button onClick={() => this.saveToGist()}>Save</button>
+                |-----|
+                <button onClick={() => this.createGist()}>Create</button>
+              </Fragment>
+            )}
           </div>
 
           <div className="code">
